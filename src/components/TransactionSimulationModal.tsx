@@ -294,6 +294,7 @@ export default function TransactionSimulationModal({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setConfirming(false);
       void runSim();
     }

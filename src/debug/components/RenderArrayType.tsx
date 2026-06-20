@@ -62,7 +62,7 @@ export const renderArrayType = ({
         onChange,
         formError,
         setFormError,
-      } as JsonSchemaFormProps);
+      });
     });
   }
 

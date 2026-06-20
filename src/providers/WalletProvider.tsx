@@ -105,31 +105,23 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
     [accounts],
   );
 
-  const handleSetAddress = (newAddr: string | undefined) => {
+  const handleSetAddress = useCallback((newAddr: string | undefined) => {
     setAddress(newAddr);
     if (newAddr) {
-      setAccounts((prev) => {
+      setAccounts((prev: string[]) => {
         if (prev.includes(newAddr)) return prev;
         const next = [...prev, newAddr];
         storage.setItem("walletAccounts", next);
         return next;
       });
     }
-  };
+  }, []);
   const [connectionError, setConnectionError] = useState<string | undefined>();
   const popupLock = useRef(false);
 
   const clearError = useCallback(() => setConnectionError(undefined), []);
 
-  const disconnect = useCallback(async () => {
-    await disconnectWallet();
-    // Clear all cached queries to remove any contract client data
-    queryClient.clear();
-    nullify();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryClient]);
-
-  const nullify = () => {
+  const nullify = useCallback(() => {
     handleSetAddress(undefined);
     setAccounts([]);
     storage.removeItem("walletAccounts");
@@ -140,7 +132,15 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
     storage.setItem("walletAddress", "");
     storage.setItem("walletNetwork", "");
     storage.setItem("networkPassphrase", "");
-  };
+  }, [handleSetAddress]);
+
+  const disconnect = useCallback(async () => {
+    await disconnectWallet();
+    // Clear all cached queries to remove any contract client data
+    queryClient.clear();
+    nullify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, nullify]);
 
   const updateBalances = useCallback(async () => {
     if (!address) {
@@ -149,13 +149,14 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const newBalances = await fetchBalances(address);
-    setBalances((prev) => {
+    setBalances((prev: MappedBalances) => {
       if (deepEqual(newBalances, prev)) return prev;
       return newBalances;
     });
   }, [address]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void updateBalances();
   }, [updateBalances]);
 
@@ -255,7 +256,7 @@ export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
       isMounted = false;
       if (timer) clearTimeout(timer);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- it SHOULD only run once per component mount
+  }, []);
 
   const contextValue = useMemo(
     () => ({

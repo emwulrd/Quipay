@@ -16,7 +16,7 @@ jest.mock("@stellar/stellar-sdk", () => ({
       scvSymbol: jest
         .fn()
         .mockImplementation((s: string) => `sym:${s}` as never),
-      scvVoid: jest.fn().mockReturnValue("void" as never),
+      scvVoid: jest.fn().mockReturnValue("void"),
       scvMap: jest
         .fn()
         .mockImplementation(

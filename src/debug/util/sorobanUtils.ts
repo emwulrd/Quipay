@@ -216,7 +216,7 @@ const isMap = (arg: unknown) => {
       Array.isArray(arg) &&
       arg.every((obj: AnyObject) => {
         // Check if object has exactly two keys: "0" and "1"
-        const keys = Object.keys(obj as object);
+        const keys = Object.keys(obj);
         if (keys.length !== 2 || !keys.includes("0") || !keys.includes("1")) {
           return false;
         }
@@ -272,7 +272,7 @@ const getScValFromArg = (arg: unknown, scVals: xdr.ScVal[]): xdr.ScVal => {
     return xdr.ScVal.scvVec(arrayScVals);
   }
 
-  return getScValsFromArgs({ arg: arg as AnyObject }, scVals || [])[0];
+  return getScValsFromArgs({ arg: arg }, scVals || [])[0];
 };
 
 const convertValuesToScVals = (

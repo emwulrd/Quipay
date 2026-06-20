@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   getStreamsByWorker,
   getStreamById,
@@ -63,27 +63,6 @@ const STROOPS_PER_UNIT = 1e7;
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, "");
 const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
-const _employerNameCache = new Map<string, string>();
-
-async function resolveEmployerName(stellarAddress: string): Promise<string> {
-  if (_employerNameCache.has(stellarAddress)) {
-    return _employerNameCache.get(stellarAddress)!;
-  }
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/employers/by-address?address=${encodeURIComponent(stellarAddress)}`,
-    );
-    const data = (await res.json()) as {
-      employer: { business_name: string } | null;
-    };
-    const name = data.employer?.business_name ?? stellarAddress;
-    _employerNameCache.set(stellarAddress, name);
-    return name;
-  } catch {
-    return stellarAddress;
-  }
-}
-
 const fetchProof = async (
   streamId: string,
 ): Promise<{ cid: string; gatewayUrl: string } | null> => {
@@ -128,11 +107,45 @@ export const useStreams = (workerAddress: string | undefined) => {
   const [error, setError] = useState<string | null>(null);
   const [fetchTick, setFetchTick] = useState(0);
 
+  // Move employer name cache into hook scope to ensure it's cleared on wallet disconnect
+  const employerNameCacheRef = useRef(new Map<string, string>());
+  // Track the previous worker address to detect wallet changes
+  const prevWorkerAddressRef = useRef<string | undefined>(workerAddress);
+
   const refetch = useCallback(() => {
     setFetchTick((t) => t + 1);
   }, []);
 
+  const resolveEmployerName = useCallback(
+    async (stellarAddress: string): Promise<string> => {
+      const cache = employerNameCacheRef.current;
+      if (cache.has(stellarAddress)) {
+        return cache.get(stellarAddress)!;
+      }
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/employers/by-address?address=${encodeURIComponent(stellarAddress)}`,
+        );
+        const data = (await res.json()) as {
+          employer: { business_name: string } | null;
+        };
+        const name = data.employer?.business_name ?? stellarAddress;
+        cache.set(stellarAddress, name);
+        return name;
+      } catch {
+        return stellarAddress;
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
+    // Clear cache when wallet disconnects OR when wallet address changes
+    if (prevWorkerAddressRef.current !== workerAddress) {
+      employerNameCacheRef.current.clear();
+      prevWorkerAddressRef.current = workerAddress;
+    }
+
     if (!workerAddress) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setStreams([]);
@@ -232,7 +245,7 @@ export const useStreams = (workerAddress: string | undefined) => {
     };
 
     void fetchData();
-  }, [workerAddress, fetchTick]);
+  }, [workerAddress, fetchTick, resolveEmployerName]);
 
   return {
     streams,
