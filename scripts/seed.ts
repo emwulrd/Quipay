@@ -11,6 +11,9 @@ import {
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { config } from "dotenv";
+
+config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,10 +21,16 @@ const __dirname = path.dirname(__filename);
 // the main variables
 const RPC_URL = "https://soroban-testnet.stellar.org";
 const NETWORK_PASSPHRASE = Networks.TESTNET;
-const XLM_SAC_TESTNET =
-  "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC";
-const STREAM_CONTRACT_ID =
-  "CB4C43V42F5WWG5S7DK7JXCX7HYFPBTPNZ3F7M2A4DDWII2HUWNTHLWL";
+
+const XLM_SAC_TESTNET = process.env.XLM_SAC_TESTNET;
+const STREAM_CONTRACT_ID = process.env.VITE_PAYROLL_STREAM_CONTRACT_ID;
+
+if (!XLM_SAC_TESTNET || !STREAM_CONTRACT_ID) {
+  console.error(
+    "Missing XLM_SAC_TESTNET or VITE_PAYROLL_STREAM_CONTRACT_ID in .env",
+  );
+  process.exit(1);
+}
 
 const server = new SorobanRpc.Server(RPC_URL, { allowHttp: true });
 
@@ -38,7 +47,6 @@ async function fundAccount(publicKey: string) {
     throw err;
   }
 }
-
 
 async function createStream(
   employer: Keypair,
@@ -71,7 +79,7 @@ async function createStream(
     )
     .setTimeout(300)
     .build();
-  
+
   // prepare transaction
   const prepared = await server.prepareTransaction(tx);
   prepared.sign(employer);
@@ -87,12 +95,23 @@ async function createStream(
   console.log(`Tx submitted: ${hash}. Waiting for confirmation...`);
 
   let statusResponse = await server.getTransaction(hash);
+  let attempts = 0;
+  const MAX_ATTEMPTS = 30;
+
   while (
-    statusResponse.status === "NOT_FOUND" ||
-    statusResponse.status === "PENDING"
+    (statusResponse.status === "NOT_FOUND" ||
+      statusResponse.status === "PENDING") &&
+    attempts < MAX_ATTEMPTS
   ) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
     statusResponse = await server.getTransaction(hash);
+    attempts++;
+  }
+
+  if (attempts === MAX_ATTEMPTS) {
+    throw new Error(
+      `Tx ${hash} did not confirm after ${MAX_ATTEMPTS} attempts`,
+    );
   }
 
   if (statusResponse.status === "SUCCESS") {
@@ -102,10 +121,17 @@ async function createStream(
   }
 }
 
+interface SeedOutput {
+  employers: { publicKey: string; secretKey: string }[];
+  workers: { publicKey: string; secretKey: string }[];
+  activeStreams: { employer: string; worker: string; status: string }[];
+  expiredStreams: { employer: string; worker: string; status: string }[];
+}
+
 async function run() {
   console.log("Starting Quipay Local Development Seed Script...");
 
-  const output: any = {
+  const output: SeedOutput = {
     employers: [],
     workers: [],
     activeStreams: [],
@@ -155,7 +181,6 @@ async function run() {
   // 3 expired streams
   // distribute them among employers and workers
   const now = Math.floor(Date.now() / 1000);
-  const monthSeconds = 30 * 24 * 60 * 60;
 
   // active streams start 1 week ago, end 3 weeks from now
   const activeStart = now - 7 * 24 * 60 * 60;
@@ -210,6 +235,10 @@ async function run() {
   }
 
   fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
+  console.warn(
+    "WARNING: seed-output.json contains testnet secret keys in plaintext.",
+  );
+  console.warn("Never reuse these keys on mainnet or in production!");
   console.log(`Seed script completed successfully! Data saved to ${outPath}`);
 }
 
