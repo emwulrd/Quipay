@@ -71,11 +71,13 @@ export const NetworkStatusProvider = ({
   useEffect(() => {
     mountedRef.current = true;
 
-    void refresh();
-
     const interval = setInterval(() => {
       void refresh();
     }, REFRESH_INTERVAL);
+
+    // Initial refresh after setting up interval
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refresh();
 
     return () => {
       mountedRef.current = false;

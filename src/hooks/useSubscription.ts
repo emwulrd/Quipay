@@ -36,9 +36,9 @@ export function useSubscription(
   pollInterval = 5000,
 ) {
   const id = `${contractId}:${topic}`;
-  paging[id] = paging[id] || {};
 
   React.useEffect(() => {
+    if (!paging[id]) paging[id] = {};
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let stop = false;
 

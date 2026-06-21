@@ -17,7 +17,7 @@ export const getMemoError = (
   switch (memo?.type) {
     case "text":
       // eslint-disable-next-line no-case-declarations
-      const memoTextBytes = Buffer.byteLength(memo.value as string, "utf8");
+      const memoTextBytes = Buffer.byteLength(memo.value, "utf8");
 
       if (memoTextBytes > 28) {
         return `Memo Text accepts a string of up to 28 bytes. ${memoTextBytes} bytes entered.`;

@@ -1,4 +1,3 @@
-import { submitAndAwaitTx } from "../payroll_stream";
 import * as SorobanClient from "@stellar/stellar-sdk";
 
 // Mock the getRpcServer and network passphrase

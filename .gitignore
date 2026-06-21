@@ -40,6 +40,9 @@ lint_output.txt
 # Kiro IDE config
 *.config.kiro
 
+# Editor config (local only)
+.vscode/
+
 # GPG key files
 *.gpg
 

@@ -59,17 +59,12 @@ jobs:
       - name: Pull stellar-quickstart image
         run: docker pull stellar/quickstart:testing
       - name: Security audit
-        # NOTE: Pre-existing vulnerabilities tracked separately. Will be fixed in maintenance PR.
-        # --audit-level=critical: the one remaining high is xlsx (SheetJS, no upstream fix).
-        # All critical vulnerabilities have been resolved via package.json overrides.
-        continue-on-error: true
-        run: npm audit --audit-level=critical
-      - name: Lint
-        # NOTE: 21 pre-existing ESLint errors block CI (see LINT_BLOCKERS.md for details)
-        # These errors exist on main branch and are unrelated to Issue #1012
-        # Must be fixed in a separate maintenance PR before this can be removed
-        continue-on-error: true
-        run: npm run lint
+        # --audit-level=critical with --omit=dev: excludes dev dependencies from security checks.
+        # Dev-only tools (shadcn, jest, vite) with critical vulnerabilities don't affect production.
+        # Known unresolvable production criticals as of 2026-06-19: None after moving shadcn to devDependencies.
+        # Remaining high-severity issues in production dependencies are documented and tracked.
+        run: npm audit --omit=dev --audit-level=critical
+      - run: npm run lint
       - name: Check formatting
         run: npx prettier . --check --ignore-unknown
       - run: npm run build

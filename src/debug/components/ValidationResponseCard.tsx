@@ -85,11 +85,9 @@ export const ValidationResponseCard = ({
           as="div"
           size="sm"
           weight="semi-bold"
-          style={
-            {
-              marginBottom: "1rem",
-            } as React.CSSProperties
-          }
+          style={{
+            marginBottom: "1rem",
+          }}
         >
           {summary}
         </Text>

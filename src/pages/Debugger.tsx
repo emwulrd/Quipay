@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Layout, Code, Card, Button, Input } from "@stellar/design-system";
-import { Client } from "@stellar/stellar-sdk/contract";
 import { ContractForm } from "../debug/components/ContractForm.tsx";
 import { Box } from "../components/layout/Box.tsx";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
@@ -15,36 +14,28 @@ const Debugger: React.FC = () => {
   const failedContracts = data?.failed ?? {};
   const navigate = useNavigate();
 
-  const [selectedContract, setSelectedContract] = useState<string>("");
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
   const { contractName } = useParams<{ contractName?: string }>();
 
   const contractKeys = Array.from(
     new Set([...Object.keys(contractMap), ...Object.keys(failedContracts)]),
   );
-  useEffect(() => {
-    if (!isLoading && contractKeys.length > 0) {
-      if (contractName && contractKeys.includes(contractName)) {
-        setSelectedContract(contractName);
-      } else {
-        setSelectedContract(contractKeys[0]);
-      }
-    }
+  const contractKeysKey = contractKeys.join(",");
+
+  const selectedContract = useMemo(() => {
+    if (isLoading || contractKeys.length === 0) return "";
+    if (contractName && contractKeys.includes(contractName))
+      return contractName;
+    return contractKeys[0];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contractName, isLoading, contractKeys.join(",")]);
+  }, [contractName, isLoading, contractKeysKey]);
 
   useEffect(() => {
-    if (!isLoading && contractKeys.length > 0) {
-      if (contractName && contractKeys.includes(contractName)) {
-        setSelectedContract(contractName);
-      } else if (!contractName) {
-        void navigate(`/debug/${contractKeys[0]}`, { replace: true });
-      } else {
-        setSelectedContract(contractKeys[0]);
-      }
+    if (!isLoading && contractKeys.length > 0 && !contractName) {
+      void navigate(`/debug/${contractKeys[0]}`, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contractName, isLoading, contractKeys.join(",")]);
+  }, [contractName, isLoading, contractKeysKey]);
 
   if (isLoading) {
     return (
@@ -200,10 +191,8 @@ const Debugger: React.FC = () => {
                           }}
                           readOnly
                           value={
-                            (
-                              contractMap[selectedContract]
-                                ?.default as unknown as Client
-                            )?.options?.contractId || ""
+                            contractMap[selectedContract]?.default?.options
+                              ?.contractId || ""
                           }
                         />
 
